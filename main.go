@@ -11,7 +11,9 @@ import (
 //go:generate ragel -Z ucl.rl
 
 type FormatConfig struct {
-	Indent string
+	Indent                   string `json:",omitempty"`
+	MultilineObjectThreshold int    `json:",omitempty"`
+	MultilineArrayThreshold  int    `json:",omitempty"`
 }
 
 type Value interface {
@@ -121,11 +123,31 @@ func (v Array) format(indent string, config *FormatConfig) string {
 	if newIndent == "" {
 		newIndent = "  "
 	}
-	r := "[\n"
-	for i := 0; i < len(v.Value)-1; i++ {
-		r += indent + newIndent + v.Value[i].format(indent+newIndent, config) + ",\n"
+	items := make([]string, len(v.Value))
+	for i, item := range v.Value {
+		items[i] = item.format(indent+newIndent, config)
 	}
-	r += indent + newIndent + v.Value[len(v.Value)-1].format(indent+newIndent, config) + "\n"
+	shortFormatLen := 2                    // brackets
+	shortFormatLen += (len(items) - 1) * 2 // ", " between items
+	for _, item := range items {
+		if strings.IndexRune(item, '\n') >= 0 {
+			// One of the items spans multiple lines, bail out.
+			shortFormatLen = config.MultilineArrayThreshold + 1
+			break
+		}
+		shortFormatLen += len(item)
+		if shortFormatLen > config.MultilineArrayThreshold {
+			break
+		}
+	}
+	if shortFormatLen <= config.MultilineArrayThreshold {
+		return "[" + strings.Join(items, ", ") + "]"
+	}
+	r := "[\n"
+	for i := 0; i < len(items)-1; i++ {
+		r += indent + newIndent + items[i] + ",\n"
+	}
+	r += indent + newIndent + items[len(items)-1] + "\n"
 	r += indent + "]"
 	return r
 }
@@ -175,6 +197,27 @@ func (v Object) format(indent string, config *FormatConfig) string {
 		keys = append(keys, k)
 	}
 	sort.Sort(keySlice(keys))
+
+	items := make([]string, len(keys))
+	for i, k := range keys {
+		items[i] = k.format(indent+newIndent, config) + ": " + v.Value[k].format(indent+newIndent, config)
+	}
+	shortFormatLen := 2                    // brackets
+	shortFormatLen += (len(items) - 1) * 2 // ", " between items
+	for _, item := range items {
+		if strings.IndexRune(item, '\n') >= 0 {
+			// One of the items spans multiple lines, bail out.
+			shortFormatLen = config.MultilineObjectThreshold + 1
+			break
+		}
+		shortFormatLen += len(item)
+		if shortFormatLen > config.MultilineObjectThreshold {
+			break
+		}
+	}
+	if shortFormatLen <= config.MultilineObjectThreshold {
+		return "{" + strings.Join(items, ", ") + "}"
+	}
 
 	r := "{\n"
 	for i := 0; i < len(keys)-1; i++ {
