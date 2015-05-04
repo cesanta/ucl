@@ -239,10 +239,10 @@ func parse_value(data []rune, p int, pe int) (Value, int, error) {
 		fexec newp;
 	}
 	
-	array = ws* . ("[" >parse_array);	
-	object = ws* . ("{" >parse_object);
+	array = "[" >parse_array;
+	object = "{" >parse_object;
 
-	document = (object | array);
+	document = ws* . (object | array) . ws*;
 	
 	main := document $!error;
 	

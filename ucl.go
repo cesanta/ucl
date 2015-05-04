@@ -955,15 +955,16 @@ var _document_key_offsets []byte = []byte{
 }
 
 var _document_trans_keys []int32 = []int32{
-	13, 32, 91, 123, 9, 10, 
+	13, 32, 91, 123, 9, 10, 13, 32, 
+	9, 10, 
 }
 
 var _document_single_lengths []byte = []byte{
-	0, 4, 0, 
+	0, 4, 2, 
 }
 
 var _document_range_lengths []byte = []byte{
-	0, 1, 0, 
+	0, 1, 1, 
 }
 
 var _document_index_offsets []byte = []byte{
@@ -971,11 +972,13 @@ var _document_index_offsets []byte = []byte{
 }
 
 var _document_trans_targs []byte = []byte{
-	1, 1, 2, 2, 1, 0, 0, 
+	1, 1, 2, 2, 1, 0, 2, 2, 
+	2, 0, 
 }
 
 var _document_trans_actions []byte = []byte{
-	0, 0, 5, 3, 0, 1, 1, 
+	0, 0, 5, 3, 0, 1, 0, 0, 
+	0, 1, 
 }
 
 var _document_eof_actions []byte = []byte{
@@ -1002,14 +1005,14 @@ func parse_json(data []rune) (Value, int, error) {
 	var ret Value
 
 
-//line ucl.go:1006
+//line ucl.go:1009
 	{
 	cs = document_start
 	}
 
 //line ucl.rl:262
 
-//line ucl.go:1013
+//line ucl.go:1016
 	{
 	var _klen int
 	var _trans int
@@ -1110,7 +1113,7 @@ _match:
 		p = ( newp) - 1
 
 	
-//line ucl.go:1114
+//line ucl.go:1117
 		}
 	}
 
@@ -1134,7 +1137,7 @@ _again:
 
 		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
 	
-//line ucl.go:1138
+//line ucl.go:1141
 			}
 		}
 	}
