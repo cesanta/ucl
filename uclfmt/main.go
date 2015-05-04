@@ -1,3 +1,7 @@
+// uclfmt is a utility for formatting UCL files.
+// It looks for .ucl-format file in any of the parent directories of the input file
+// (or current working dir, if reading from stdin), parses it as JSON into ucl.FormatConfig
+// structure and uses that to re-format the input file.
 package main
 
 import (

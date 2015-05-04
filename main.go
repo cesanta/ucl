@@ -1,3 +1,5 @@
+// Package ucl implements parser and serializer for UCL (https://rspamd.com/doc/configuration/ucl.html).
+// Currently it supports only plain JSON, but I'm working on that :)
 package ucl
 
 import (
@@ -10,18 +12,33 @@ import (
 
 //go:generate ragel -Z ucl.rl
 
+// FormatConfig represents the formatter configuration that affects how
+// data is layed out in the output file.
 type FormatConfig struct {
+	// Indent is a string to use for each indentation level. If not set defaults to 2 spaces.
 	Indent                   string `json:",omitempty"`
+	// MultilineObjectThreshold is the maximum length for an object to be written out on a single line.
+	// Default is 0, meaning that any non-empty object will be written out with key-value pairs on separate lines.
 	MultilineObjectThreshold int    `json:",omitempty"`
+	// MultilineObjectThreshold is the maximum length for an array to be written out on a single line.
+	// Default is 0, meaning that any non-empty array will be written out with items on separate lines.
 	MultilineArrayThreshold  int    `json:",omitempty"`
+	// PreserveObjectKeysOrder must be set to true if you want to keep keys in the same order as in the input.
+	// By default keys are sorted in lexicographical order.
 	PreserveObjectKeysOrder  bool   `json:",omitempty"`
+	placeholder struct{}
 }
 
+// Value represents a UCL value.
 type Value interface {
+	// String returns simple string representation of the value.
 	String() string
+	// format returns a properly formatted representation of the value. Used internally
+	// by Format function.
 	format(indent string, config *FormatConfig) string
 }
 
+// Format writes v, formatted according to c, to w.
 func Format(v Value, c *FormatConfig, w io.Writer) error {
 	if c == nil {
 		c = &FormatConfig{} // keep this empty, zero values for options should mean default format.
@@ -30,6 +47,7 @@ func Format(v Value, c *FormatConfig, w io.Writer) error {
 	return err
 }
 
+// Parse reads UTF-8 text from r and parses it.
 func Parse(r io.Reader) (Value, error) {
 	rr := bufio.NewReader(r)
 	data := []rune{}
@@ -54,6 +72,7 @@ func parse(data []rune) (Value, error) {
 	return v, nil
 }
 
+// Null represents "null" JSON value.
 type Null struct{}
 
 func (Null) String() string {
@@ -64,6 +83,7 @@ func (Null) format(indent string, config *FormatConfig) string {
 	return "null"
 }
 
+// Bool represents boolean value.
 type Bool struct {
 	Value bool
 }
@@ -79,6 +99,7 @@ func (v Bool) format(indent string, config *FormatConfig) string {
 	return v.String()
 }
 
+// Number represents a numerical value.
 type Number struct {
 	Value float64
 }
@@ -91,6 +112,7 @@ func (v Number) format(indent string, config *FormatConfig) string {
 	return v.String()
 }
 
+// String represents a string value.
 type String struct {
 	Value string
 }
@@ -104,6 +126,7 @@ func (v String) format(indent string, config *FormatConfig) string {
 	return v.String()
 }
 
+// Array represents an array.
 type Array struct {
 	Value []Value
 }
@@ -153,6 +176,7 @@ func (v Array) format(indent string, config *FormatConfig) string {
 	return r
 }
 
+// Key represents keys in objects.
 type Key struct {
 	Value string
 	Index int
@@ -179,6 +203,7 @@ func (s byIndex) Len() int           { return len(s) }
 func (s byIndex) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s byIndex) Less(i, j int) bool { return s[i].Index < s[j].Index }
 
+// Object represents an object.
 type Object struct {
 	Value map[Key]Value
 }
