@@ -2,6 +2,7 @@ package ucl
 
 import (
 	"fmt"
+	"strconv"
 )
 
 %%{
@@ -9,36 +10,77 @@ import (
 	alphtype rune;
 
 	action error {
-		return /*nil, */fmt.Errorf("parse error at byte %d (state=%d)", fpc, cs)
+		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", fpc, cs)
 	}
 
 	action done { fhold; fbreak; }
 	
 	ws = [ \t\r\n];
 
-	false = "false";
-	true = "true";
-	nullval = "null";
-
 	unescaped = (0x20..0x21 | 0x23..0x5B | 0x5D..0x10FFFF);
 	char = (unescaped | "\\" . ([\"\\/bfnrt] | "u" . [0-9a-fA-F]{4}));
 	string = ("\"" . char** . "\"");
-
-	int = "0" | ([1-9] . [0-9]*);
-	number = "-"? . int . ("." . [0-9]+)? . ([eE] . [\+\-]? . [0-9]+)? (^[0-9eE\-\+.] @done);
 }%%
 
+//go:generate sh -c "ragel -Z -S number -V -p ucl.rl | dot -Tpng > number.png"
+%%{
+	machine number;
+	include common;
+
+	action end_number {
+		v, err := strconv.ParseFloat(string(data[start:fpc]), 64)
+		if err != nil {
+			return nil, -1, err
+		}
+		ret.Value = v
+	}
+	
+	int = "0" | ([1-9] . [0-9]*);
+	main := "-"? . int . ("." . [0-9]+)? . ([eE] . [\+\-]? . [0-9]+)? (^[0-9eE\-\+.] @end_number @done);
+
+	write data;
+}%%
+
+func parse_number(data []rune, p int, pe int) (Value, int, error) {
+	var (
+		cs int
+		eof = pe
+		ret Number
+		start = p
+	)
+	_ = eof
+%% write init;
+%% write exec;
+
+	if cs >= number_first_final {
+		return ret, p, nil
+	}
+	return nil, -1, fmt.Errorf("[number] wat p=%d cs=%d", p, cs)
+}
+
+//go:generate sh -c "ragel -Z -S object -V -p ucl.rl | dot -Tpng > object.png"
 %%{
 	machine object;
 	include common;
 	
 	action parse_value {
-		newp, err := parse_value(data, fpc, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_value(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret.Value[key] = v;
 		fexec newp;
 	}
 
-	member = (string . ws* . ":" . ws* . (^ws >parse_value));
+	action start_tok {
+		start = fpc
+	}
+	
+	action end_key {
+		// TODO(imax): unescape content.
+		key = Key{Value: string(data[start+1:fpc])}
+	}
+
+	key = string >start_tok @end_key;
+	member = (key . ws* . ":" . ws* . (^ws >parse_value));
 
 	object_content = (member . (ws* . "," . ws* . member)*);
 	
@@ -47,10 +89,13 @@ import (
 	write data;
 }%%
 
-func parse_object(data []rune, p int, pe int) (int, error) {
+func parse_object(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret = &Object{Value: map[Key]Value{}}
+		key Key
+		start int
 	)
 	_ = eof
 
@@ -58,18 +103,20 @@ func parse_object(data []rune, p int, pe int) (int, error) {
 %% write exec;
 
 	if cs >= object_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("[object] wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("[object] wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S array -V -p ucl.rl | dot -Tpng > array.png"
 %%{
 	machine array;
 	include common;
 	
 	action parse_value {
-		newp, err := parse_value(data, fpc, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_value(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret.Value = append(ret.Value, v)
 		fexec newp;
 	}
 
@@ -82,10 +129,11 @@ func parse_object(data []rune, p int, pe int) (int, error) {
 	write data;
 }%%
 
-func parse_array(data []rune, p int, pe int) (int, error) {
+func parse_array(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret = &Array{}
 	)
 	_ = eof
 
@@ -93,66 +141,91 @@ func parse_array(data []rune, p int, pe int) (int, error) {
 %% write exec;
 
 	if cs >= array_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("[array] wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("[array] wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S value -V -p ucl.rl | dot -Tpng > value.png"
 %%{
 	machine value;
 	include common;
 
-	action parse_value_error {
-		return -1, fmt.Errorf("parse error at byte %d (state=%d)", fpc, cs)
-	}
-	
 	action parse_object {
-		newp, err := parse_object(data, fpc, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_object(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		fexec newp;
 	}
 
 	action parse_array {
-		newp, err := parse_array(data, fpc, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_array(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		fexec newp;
 	}
 	
+	action parse_number {
+		v, newp, err := parse_number(data, fpc, pe)
+		if err != nil { return nil, -1, err };
+		ret = v;
+		fexec newp;
+	}
+	
+	action start_tok {
+		start = fpc
+	}
+	
+	action end_string {
+		// TODO(imax): unescape content.
+		ret = &String{Value: string(data[start+1:fpc])}
+	}
+
+	false = "false" @{ret = &Bool{Value: false}};
+	true = "true" @{ret = &Bool{Value: true}};
+	nullval = "null" @{ret = &Null{}};
+	
 	array = ws* . ("[" >parse_array);
 	object = ws* . ("{" >parse_object);
+	number = [\-0-9] >parse_number;
 	
-	main := (false | true | nullval | object | array | number | string) %*done $!parse_value_error;
+	main := (false | true | nullval | object | array | number | (string >start_tok @end_string)) %*done $!error;
 	
 	write data;
 }%%
 
-func parse_value(data []rune, p int, pe int) (int, error) {
+func parse_value(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret Value
+		start int
 	)
 
 %% write init;
 %% write exec;
 	if cs >= value_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S document -V -p ucl.rl | dot -Tpng > document.png"
 %%{
 	machine document;
 	include common;
 
 	action parse_object {
-		newp, err := parse_object(data, fpc, pe);
-		if err != nil { return err };
+		v, newp, err := parse_object(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		fexec newp;
 	}
 
 	action parse_array {
-		newp, err := parse_array(data, fpc, pe);
-		if err != nil { return err };
+		v, newp, err := parse_array(data, fpc, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		fexec newp;
 	}
 	
@@ -166,23 +239,17 @@ func parse_value(data []rune, p int, pe int) (int, error) {
 	write data;
 }%%
 
-func parse_json(data []rune) (/*Document,*/ error) {
+func parse_json(data []rune) (Value, int, error) {
 	var (
 		cs int
 		p int
 		pe int = len(data)
 		eof int = len(data)
-		top int
-		stack []int
 	)
-	_ = top
-	_ = stack
-	var (
-//		ret = Document{}
-	)
+	var ret Value
 
 %% write init;
 %% write exec;
 
-	return /*ret, */nil
+	return ret, -1, nil
 }

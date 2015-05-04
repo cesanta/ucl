@@ -1,7 +1,9 @@
 package ucl
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -9,6 +11,30 @@ import (
 
 type Value interface {
 	String() string
+}
+
+func Parse(r io.Reader) (Value, error) {
+	rr := bufio.NewReader(r)
+	data := []rune{}
+	for {
+		c, _, err := rr.ReadRune()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, c)
+	}
+	return parse(data)
+}
+
+func parse(data []rune) (Value, error) {
+	v, _, err := parse_json(data)
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
 }
 
 type Null struct{}

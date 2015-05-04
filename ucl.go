@@ -4,16 +4,216 @@ package ucl
 
 import (
 	"fmt"
+	"strconv"
 )
 
 
-//line ucl.rl:29
+//line ucl.rl:23
 
 
+//go:generate sh -c "ragel -Z -S number -V -p ucl.rl | dot -Tpng > number.png"
 
-//line ucl.go:15
+//line ucl.go:17
+var _number_actions []byte = []byte{
+	0, 2, 1, 0, 
+}
+
+var _number_key_offsets []byte = []byte{
+	0, 0, 4, 7, 14, 16, 23, 27, 
+	29, 36, 43, 
+}
+
+var _number_trans_keys []int32 = []int32{
+	45, 48, 49, 57, 48, 49, 57, 43, 
+	45, 46, 69, 101, 48, 57, 48, 57, 
+	43, 69, 101, 45, 46, 48, 57, 43, 
+	45, 48, 57, 48, 57, 43, 69, 101, 
+	45, 46, 48, 57, 43, 45, 46, 69, 
+	101, 48, 57, 
+}
+
+var _number_single_lengths []byte = []byte{
+	0, 2, 1, 5, 0, 3, 2, 0, 
+	3, 5, 0, 
+}
+
+var _number_range_lengths []byte = []byte{
+	0, 1, 1, 1, 1, 2, 1, 1, 
+	2, 1, 0, 
+}
+
+var _number_index_offsets []byte = []byte{
+	0, 0, 4, 7, 14, 16, 22, 26, 
+	28, 34, 41, 
+}
+
+var _number_indicies []byte = []byte{
+	0, 2, 3, 1, 2, 3, 1, 1, 
+	1, 5, 6, 6, 1, 4, 7, 1, 
+	1, 6, 6, 1, 7, 4, 8, 8, 
+	9, 1, 9, 1, 1, 1, 1, 1, 
+	9, 4, 1, 1, 5, 6, 6, 3, 
+	4, 1, 
+}
+
+var _number_trans_targs []byte = []byte{
+	2, 0, 3, 9, 10, 4, 6, 5, 
+	7, 8, 
+}
+
+var _number_trans_actions []byte = []byte{
+	0, 0, 0, 0, 1, 0, 0, 0, 
+	0, 0, 
+}
+
+const number_start int = 1
+const number_first_final int = 10
+const number_error int = 0
+
+const number_en_main int = 1
+
+
+//line ucl.rl:42
+
+
+func parse_number(data []rune, p int, pe int) (Value, int, error) {
+	var (
+		cs int
+		eof = pe
+		ret Number
+		start = p
+	)
+	_ = eof
+
+//line ucl.go:89
+	{
+	cs = number_start
+	}
+
+//line ucl.rl:53
+
+//line ucl.go:96
+	{
+	var _klen int
+	var _trans int
+	var _acts int
+	var _nacts uint
+	var _keys int
+	if p == pe {
+		goto _test_eof
+	}
+	if cs == 0 {
+		goto _out
+	}
+_resume:
+	_keys = int(_number_key_offsets[cs])
+	_trans = int(_number_index_offsets[cs])
+
+	_klen = int(_number_single_lengths[cs])
+	if _klen > 0 {
+		_lower := int(_keys)
+		var _mid int
+		_upper := int(_keys + _klen - 1)
+		for {
+			if _upper < _lower {
+				break
+			}
+
+			_mid = _lower + ((_upper - _lower) >> 1)
+			switch {
+			case data[p] < _number_trans_keys[_mid]:
+				_upper = _mid - 1
+			case data[p] > _number_trans_keys[_mid]:
+				_lower = _mid + 1
+			default:
+				_trans += int(_mid - int(_keys))
+				goto _match
+			}
+		}
+		_keys += _klen
+		_trans += _klen
+	}
+
+	_klen = int(_number_range_lengths[cs])
+	if _klen > 0 {
+		_lower := int(_keys)
+		var _mid int
+		_upper := int(_keys + (_klen << 1) - 2)
+		for {
+			if _upper < _lower {
+				break
+			}
+
+			_mid = _lower + (((_upper - _lower) >> 1) & ^1)
+			switch {
+			case data[p] < _number_trans_keys[_mid]:
+				_upper = _mid - 2
+			case data[p] > _number_trans_keys[_mid + 1]:
+				_lower = _mid + 2
+			default:
+				_trans += int((_mid - int(_keys)) >> 1)
+				goto _match
+			}
+		}
+		_trans += _klen
+	}
+
+_match:
+	_trans = int(_number_indicies[_trans])
+	cs = int(_number_trans_targs[_trans])
+
+	if _number_trans_actions[_trans] == 0 {
+		goto _again
+	}
+
+	_acts = int(_number_trans_actions[_trans])
+	_nacts = uint(_number_actions[_acts]); _acts++
+	for ; _nacts > 0; _nacts-- {
+		_acts++
+		switch _number_actions[_acts-1] {
+		case 0:
+//line ucl.rl:16
+ p--
+ p++; goto _out
+ 
+		case 1:
+//line ucl.rl:30
+
+		v, err := strconv.ParseFloat(string(data[start:p]), 64)
+		if err != nil {
+			return nil, -1, err
+		}
+		ret.Value = v
+	
+//line ucl.go:189
+		}
+	}
+
+_again:
+	if cs == 0 {
+		goto _out
+	}
+	p++
+	if p != pe {
+		goto _resume
+	}
+	_test_eof: {}
+	_out: {}
+	}
+
+//line ucl.rl:54
+
+	if cs >= number_first_final {
+		return ret, p, nil
+	}
+	return nil, -1, fmt.Errorf("[number] wat p=%d cs=%d", p, cs)
+}
+
+//go:generate sh -c "ragel -Z -S object -V -p ucl.rl | dot -Tpng > object.png"
+
+//line ucl.go:215
 var _object_actions []byte = []byte{
-	0, 1, 0, 1, 1, 
+	0, 1, 0, 1, 1, 1, 2, 1, 3, 
 }
 
 var _object_key_offsets []byte = []byte{
@@ -50,23 +250,25 @@ var _object_index_offsets []byte = []byte{
 
 var _object_indicies []byte = []byte{
 	0, 0, 2, 0, 1, 2, 2, 3, 
-	4, 2, 1, 5, 6, 3, 1, 5, 
-	5, 7, 5, 1, 7, 7, 7, 8, 
-	9, 9, 10, 4, 9, 1, 10, 10, 
-	3, 10, 1, 3, 3, 3, 3, 3, 
-	3, 3, 3, 11, 1, 12, 12, 12, 
-	1, 13, 13, 13, 1, 14, 14, 14, 
-	1, 3, 3, 3, 1, 1, 
+	4, 2, 1, 6, 7, 5, 1, 8, 
+	8, 9, 8, 1, 9, 9, 9, 10, 
+	11, 11, 12, 4, 11, 1, 12, 12, 
+	3, 12, 1, 5, 5, 5, 5, 5, 
+	5, 5, 5, 13, 1, 14, 14, 14, 
+	1, 15, 15, 15, 1, 16, 16, 16, 
+	1, 5, 5, 5, 1, 1, 
 }
 
 var _object_trans_targs []byte = []byte{
-	1, 0, 2, 3, 13, 4, 8, 5, 
-	6, 6, 7, 9, 10, 11, 12, 
+	1, 0, 2, 3, 13, 3, 4, 8, 
+	4, 5, 6, 6, 7, 9, 10, 11, 
+	12, 
 }
 
 var _object_trans_actions []byte = []byte{
-	0, 0, 0, 0, 0, 0, 0, 0, 
-	3, 0, 0, 0, 0, 0, 0, 
+	0, 0, 0, 5, 0, 0, 7, 0, 
+	0, 0, 3, 0, 0, 0, 0, 0, 
+	0, 
 }
 
 var _object_from_state_actions []byte = []byte{
@@ -81,25 +283,28 @@ const object_error int = 0
 const object_en_main int = 1
 
 
-//line ucl.rl:48
+//line ucl.rl:90
 
 
-func parse_object(data []rune, p int, pe int) (int, error) {
+func parse_object(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret = &Object{Value: map[Key]Value{}}
+		key Key
+		start int
 	)
 	_ = eof
 
 
-//line ucl.go:96
+//line ucl.go:301
 	{
 	cs = object_start
 	}
 
-//line ucl.rl:58
+//line ucl.rl:103
 
-//line ucl.go:103
+//line ucl.go:308
 	{
 	var _klen int
 	var _trans int
@@ -119,11 +324,11 @@ _resume:
 		 _acts++
 		switch _object_actions[_acts - 1] {
 		case 0:
-//line ucl.rl:15
+//line ucl.rl:16
  p--
  p++; goto _out
  
-//line ucl.go:127
+//line ucl.go:332
 		}
 	}
 
@@ -193,14 +398,26 @@ _match:
 		_acts++
 		switch _object_actions[_acts-1] {
 		case 1:
-//line ucl.rl:35
+//line ucl.rl:66
 
-		newp, err := parse_value(data, p, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_value(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret.Value[key] = v;
 		p = ( newp) - 1
 
 	
-//line ucl.go:204
+		case 2:
+//line ucl.rl:73
+
+		start = p
+	
+		case 3:
+//line ucl.rl:77
+
+		// TODO(imax): unescape content.
+		key = Key{Value: string(data[start+1:p])}
+	
+//line ucl.go:421
 		}
 	}
 
@@ -216,16 +433,17 @@ _again:
 	_out: {}
 	}
 
-//line ucl.rl:59
+//line ucl.rl:104
 
 	if cs >= object_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("[object] wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("[object] wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S array -V -p ucl.rl | dot -Tpng > array.png"
 
-//line ucl.go:229
+//line ucl.go:447
 var _array_actions []byte = []byte{
 	0, 1, 0, 1, 1, 
 }
@@ -277,25 +495,26 @@ const array_error int = 0
 const array_en_main int = 1
 
 
-//line ucl.rl:83
+//line ucl.rl:130
 
 
-func parse_array(data []rune, p int, pe int) (int, error) {
+func parse_array(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret = &Array{}
 	)
 	_ = eof
 
 
-//line ucl.go:292
+//line ucl.go:511
 	{
 	cs = array_start
 	}
 
-//line ucl.rl:93
+//line ucl.rl:141
 
-//line ucl.go:299
+//line ucl.go:518
 	{
 	var _klen int
 	var _trans int
@@ -315,11 +534,11 @@ _resume:
 		 _acts++
 		switch _array_actions[_acts - 1] {
 		case 0:
-//line ucl.rl:15
+//line ucl.rl:16
  p--
  p++; goto _out
  
-//line ucl.go:323
+//line ucl.go:542
 		}
 	}
 
@@ -389,14 +608,15 @@ _match:
 		_acts++
 		switch _array_actions[_acts-1] {
 		case 1:
-//line ucl.rl:70
+//line ucl.rl:116
 
-		newp, err := parse_value(data, p, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_value(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret.Value = append(ret.Value, v)
 		p = ( newp) - 1
 
 	
-//line ucl.go:400
+//line ucl.go:620
 		}
 	}
 
@@ -412,135 +632,124 @@ _again:
 	_out: {}
 	}
 
-//line ucl.rl:94
+//line ucl.rl:142
 
 	if cs >= array_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("[array] wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("[array] wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S value -V -p ucl.rl | dot -Tpng > value.png"
 
-//line ucl.go:425
+//line ucl.go:646
 var _value_actions []byte = []byte{
 	0, 1, 0, 1, 1, 1, 2, 1, 3, 
+	1, 4, 1, 5, 1, 6, 1, 7, 
+	1, 8, 1, 9, 
 }
 
 var _value_key_offsets []byte = []byte{
-	0, 0, 14, 20, 24, 33, 39, 45, 
-	51, 57, 60, 67, 69, 76, 80, 82, 
-	89, 96, 97, 98, 99, 100, 101, 102, 
-	103, 104, 105, 
+	0, 0, 13, 19, 23, 32, 38, 44, 
+	50, 56, 57, 58, 59, 60, 61, 62, 
+	63, 64, 65, 66, 
 }
 
 var _value_trans_keys []int32 = []int32{
-	13, 32, 34, 45, 48, 91, 102, 110, 
-	116, 123, 9, 10, 49, 57, 13, 32, 
-	91, 123, 9, 10, 34, 92, 32, 1114111, 
-	34, 47, 92, 98, 102, 110, 114, 116, 
-	117, 48, 57, 65, 70, 97, 102, 48, 
-	57, 65, 70, 97, 102, 48, 57, 65, 
-	70, 97, 102, 48, 57, 65, 70, 97, 
-	102, 48, 49, 57, 43, 45, 46, 69, 
-	101, 48, 57, 48, 57, 43, 69, 101, 
-	45, 46, 48, 57, 43, 45, 48, 57, 
-	48, 57, 43, 69, 101, 45, 46, 48, 
-	57, 43, 45, 46, 69, 101, 48, 57, 
+	13, 32, 34, 45, 91, 102, 110, 116, 
+	123, 9, 10, 48, 57, 13, 32, 91, 
+	123, 9, 10, 34, 92, 32, 1114111, 34, 
+	47, 92, 98, 102, 110, 114, 116, 117, 
+	48, 57, 65, 70, 97, 102, 48, 57, 
+	65, 70, 97, 102, 48, 57, 65, 70, 
+	97, 102, 48, 57, 65, 70, 97, 102, 
 	97, 108, 115, 101, 117, 108, 108, 114, 
-	117, 
+	117, 101, 
 }
 
 var _value_single_lengths []byte = []byte{
-	0, 10, 4, 2, 9, 0, 0, 0, 
-	0, 1, 5, 0, 3, 2, 0, 3, 
-	5, 1, 1, 1, 1, 1, 1, 1, 
-	1, 1, 0, 
+	0, 9, 4, 2, 9, 0, 0, 0, 
+	0, 1, 1, 1, 1, 1, 1, 1, 
+	1, 1, 1, 0, 
 }
 
 var _value_range_lengths []byte = []byte{
 	0, 2, 1, 1, 0, 3, 3, 3, 
-	3, 1, 1, 1, 2, 1, 1, 2, 
-	1, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 0, 
+	3, 0, 0, 0, 0, 0, 0, 0, 
+	0, 0, 0, 0, 
 }
 
 var _value_index_offsets []byte = []byte{
-	0, 0, 13, 19, 23, 33, 37, 41, 
-	45, 49, 52, 59, 61, 67, 71, 73, 
-	79, 86, 88, 90, 92, 94, 96, 98, 
-	100, 102, 104, 
+	0, 0, 12, 18, 22, 32, 36, 40, 
+	44, 48, 50, 52, 54, 56, 58, 60, 
+	62, 64, 66, 68, 
 }
 
 var _value_indicies []byte = []byte{
-	1, 1, 2, 3, 4, 6, 7, 8, 
-	9, 10, 1, 5, 0, 1, 1, 6, 
-	10, 1, 0, 11, 12, 2, 0, 2, 
-	2, 2, 2, 2, 2, 2, 2, 13, 
-	0, 14, 14, 14, 0, 15, 15, 15, 
-	0, 16, 16, 16, 0, 2, 2, 2, 
-	0, 4, 5, 0, 0, 0, 18, 19, 
-	19, 0, 17, 20, 0, 0, 19, 19, 
-	0, 20, 17, 21, 21, 22, 0, 22, 
-	0, 0, 0, 0, 0, 22, 17, 0, 
-	0, 18, 19, 19, 5, 17, 23, 0, 
-	24, 0, 25, 0, 11, 0, 26, 0, 
-	27, 0, 11, 0, 28, 0, 25, 0, 
-	0, 
+	1, 1, 2, 3, 4, 5, 6, 7, 
+	8, 1, 3, 0, 1, 1, 4, 8, 
+	1, 0, 10, 11, 9, 0, 9, 9, 
+	9, 9, 9, 9, 9, 9, 12, 0, 
+	13, 13, 13, 0, 14, 14, 14, 0, 
+	15, 15, 15, 0, 9, 9, 9, 0, 
+	16, 0, 17, 0, 18, 0, 19, 0, 
+	20, 0, 21, 0, 22, 0, 23, 0, 
+	24, 0, 25, 0, 0, 
 }
 
 var _value_trans_targs []byte = []byte{
-	0, 2, 3, 9, 10, 16, 26, 17, 
-	21, 24, 26, 26, 4, 5, 6, 7, 
-	8, 26, 11, 13, 12, 14, 15, 18, 
-	19, 20, 22, 23, 25, 
+	0, 2, 3, 19, 19, 9, 13, 16, 
+	19, 3, 19, 4, 5, 6, 7, 8, 
+	10, 11, 12, 19, 14, 15, 19, 17, 
+	18, 19, 
 }
 
 var _value_trans_actions []byte = []byte{
-	3, 0, 0, 0, 0, 0, 7, 0, 
-	0, 0, 5, 0, 0, 0, 0, 0, 
-	0, 1, 0, 0, 0, 0, 0, 0, 
-	0, 0, 0, 0, 0, 
+	1, 0, 11, 9, 7, 0, 0, 0, 
+	5, 0, 13, 0, 0, 0, 0, 0, 
+	0, 0, 0, 15, 0, 0, 19, 0, 
+	0, 17, 
 }
 
 var _value_from_state_actions []byte = []byte{
 	0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 0, 0, 0, 0, 0, 0, 
-	0, 0, 1, 
+	0, 0, 0, 3, 
 }
 
 var _value_eof_actions []byte = []byte{
-	0, 3, 3, 3, 3, 3, 3, 3, 
-	3, 3, 3, 3, 3, 3, 3, 3, 
-	3, 3, 3, 3, 3, 3, 3, 3, 
-	3, 3, 0, 
+	0, 1, 1, 1, 1, 1, 1, 1, 
+	1, 1, 1, 1, 1, 1, 1, 1, 
+	1, 1, 1, 0, 
 }
 
 const value_start int = 1
-const value_first_final int = 26
+const value_first_final int = 19
 const value_error int = 0
 
 const value_en_main int = 1
 
 
-//line ucl.rl:127
+//line ucl.rl:195
 
 
-func parse_value(data []rune, p int, pe int) (int, error) {
+func parse_value(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
+		ret Value
+		start int
 	)
 
 
-//line ucl.go:537
+//line ucl.go:746
 	{
 	cs = value_start
 	}
 
-//line ucl.rl:136
+//line ucl.rl:206
 
-//line ucl.go:544
+//line ucl.go:753
 	{
 	var _klen int
 	var _trans int
@@ -559,12 +768,12 @@ _resume:
 	for ; _nacts > 0; _nacts-- {
 		 _acts++
 		switch _value_actions[_acts - 1] {
-		case 0:
-//line ucl.rl:15
+		case 1:
+//line ucl.rl:16
  p--
  p++; goto _out
  
-//line ucl.go:568
+//line ucl.go:777
 		}
 	}
 
@@ -634,32 +843,58 @@ _match:
 		_acts++
 		switch _value_actions[_acts-1] {
 		case 0:
-//line ucl.rl:15
- p--
- p++; goto _out
- 
-		case 1:
-//line ucl.rl:105
+//line ucl.rl:12
 
-		return -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
+		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
 	
 		case 2:
-//line ucl.rl:109
+//line ucl.rl:154
 
-		newp, err := parse_object(data, p, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_object(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		p = ( newp) - 1
 
 	
 		case 3:
-//line ucl.rl:115
+//line ucl.rl:161
 
-		newp, err := parse_array(data, p, pe);
-		if err != nil { return -1, err };
+		v, newp, err := parse_array(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		p = ( newp) - 1
 
 	
-//line ucl.go:663
+		case 4:
+//line ucl.rl:168
+
+		v, newp, err := parse_number(data, p, pe)
+		if err != nil { return nil, -1, err };
+		ret = v;
+		p = ( newp) - 1
+
+	
+		case 5:
+//line ucl.rl:175
+
+		start = p
+	
+		case 6:
+//line ucl.rl:179
+
+		// TODO(imax): unescape content.
+		ret = &String{Value: string(data[start+1:p])}
+	
+		case 7:
+//line ucl.rl:184
+ret = &Bool{Value: false}
+		case 8:
+//line ucl.rl:185
+ret = &Bool{Value: true}
+		case 9:
+//line ucl.rl:186
+ret = &Null{}
+//line ucl.go:898
 		}
 	}
 
@@ -678,12 +913,12 @@ _again:
 		for ; __nacts > 0; __nacts-- {
 			__acts++
 			switch _value_actions[__acts-1] {
-			case 1:
-//line ucl.rl:105
+			case 0:
+//line ucl.rl:12
 
-		return -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
+		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
 	
-//line ucl.go:687
+//line ucl.go:922
 			}
 		}
 	}
@@ -691,15 +926,16 @@ _again:
 	_out: {}
 	}
 
-//line ucl.rl:137
+//line ucl.rl:207
 	if cs >= value_first_final {
-		return p, nil
+		return ret, p, nil
 	}
-	return -1, fmt.Errorf("wat p=%d cs=%d", p, cs)
+	return nil, -1, fmt.Errorf("wat p=%d cs=%d", p, cs)
 }
 
+//go:generate sh -c "ragel -Z -S document -V -p ucl.rl | dot -Tpng > document.png"
 
-//line ucl.go:703
+//line ucl.go:939
 var _document_actions []byte = []byte{
 	0, 1, 0, 1, 1, 1, 2, 
 }
@@ -743,33 +979,27 @@ const document_error int = 0
 const document_en_main int = 1
 
 
-//line ucl.rl:167
+//line ucl.rl:240
 
 
-func parse_json(data []rune) (/*Document,*/ error) {
+func parse_json(data []rune) (Value, int, error) {
 	var (
 		cs int
 		p int
 		pe int = len(data)
 		eof int = len(data)
-		top int
-		stack []int
 	)
-	_ = top
-	_ = stack
-	var (
-//		ret = Document{}
-	)
+	var ret Value
 
 
-//line ucl.go:766
+//line ucl.go:996
 	{
 	cs = document_start
 	}
 
-//line ucl.rl:185
+//line ucl.rl:252
 
-//line ucl.go:773
+//line ucl.go:1003
 	{
 	var _klen int
 	var _trans int
@@ -848,27 +1078,29 @@ _match:
 		_acts++
 		switch _document_actions[_acts-1] {
 		case 0:
-//line ucl.rl:11
+//line ucl.rl:12
 
-		return /*nil, */fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
+		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
 	
 		case 1:
-//line ucl.rl:147
+//line ucl.rl:218
 
-		newp, err := parse_object(data, p, pe);
-		if err != nil { return err };
+		v, newp, err := parse_object(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		p = ( newp) - 1
 
 	
 		case 2:
-//line ucl.rl:153
+//line ucl.rl:225
 
-		newp, err := parse_array(data, p, pe);
-		if err != nil { return err };
+		v, newp, err := parse_array(data, p, pe);
+		if err != nil { return nil, -1, err };
+		ret = v;
 		p = ( newp) - 1
 
 	
-//line ucl.go:872
+//line ucl.go:1104
 		}
 	}
 
@@ -888,11 +1120,11 @@ _again:
 			__acts++
 			switch _document_actions[__acts-1] {
 			case 0:
-//line ucl.rl:11
+//line ucl.rl:12
 
-		return /*nil, */fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
+		return nil, -1, fmt.Errorf("parse error at byte %d (state=%d)", p, cs)
 	
-//line ucl.go:896
+//line ucl.go:1128
 			}
 		}
 	}
@@ -900,7 +1132,7 @@ _again:
 	_out: {}
 	}
 
-//line ucl.rl:186
+//line ucl.rl:253
 
-	return /*ret, */nil
+	return ret, -1, nil
 }
