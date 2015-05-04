@@ -86,7 +86,8 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	
 	action end_key {
 		// TODO(imax): unescape content.
-		key = Key{Value: string(data[start+1:fpc])}
+		key = Key{Value: string(data[start+1:fpc]), Index: index}
+		index++
 	}
 
 	key = string >start_tok @end_key;
@@ -106,6 +107,7 @@ func parse_object(data []rune, p int, pe int) (Value, int, error) {
 		ret = &Object{Value: map[Key]Value{}}
 		key Key
 		start int
+		index int
 	)
 	_ = eof
 

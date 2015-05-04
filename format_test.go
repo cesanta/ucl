@@ -94,3 +94,20 @@ func TestMultilineArrayObjectThreshold(t *testing.T) {
 	}
 	run(t, config, cases)
 }
+
+func TestPreserveObjectKeysOrder(t *testing.T) {
+	config := &FormatConfig{PreserveObjectKeysOrder: true}
+	cases := map[string]string{
+		`{"a":[123,456]," ":{"b":1,"a":2}}`: `{
+  "a": [
+    123,
+    456
+  ],
+  " ": {
+    "b": 1,
+    "a": 2
+  }
+}`,
+	}
+	run(t, config, cases)
+}

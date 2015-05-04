@@ -14,6 +14,7 @@ type FormatConfig struct {
 	Indent                   string `json:",omitempty"`
 	MultilineObjectThreshold int    `json:",omitempty"`
 	MultilineArrayThreshold  int    `json:",omitempty"`
+	PreserveObjectKeysOrder  bool   `json:",omitempty"`
 }
 
 type Value interface {
@@ -154,6 +155,7 @@ func (v Array) format(indent string, config *FormatConfig) string {
 
 type Key struct {
 	Value string
+	Index int
 }
 
 func (v Key) String() string {
@@ -165,11 +167,17 @@ func (v Key) format(indent string, config *FormatConfig) string {
 	return v.String()
 }
 
-type keySlice []Key
+type byValue []Key
 
-func (s keySlice) Len() int           { return len(s) }
-func (s keySlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s keySlice) Less(i, j int) bool { return s[i].Value < s[j].Value }
+func (s byValue) Len() int           { return len(s) }
+func (s byValue) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s byValue) Less(i, j int) bool { return s[i].Value < s[j].Value }
+
+type byIndex []Key
+
+func (s byIndex) Len() int           { return len(s) }
+func (s byIndex) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s byIndex) Less(i, j int) bool { return s[i].Index < s[j].Index }
 
 type Object struct {
 	Value map[Key]Value
@@ -196,7 +204,11 @@ func (v Object) format(indent string, config *FormatConfig) string {
 	for k := range v.Value {
 		keys = append(keys, k)
 	}
-	sort.Sort(keySlice(keys))
+	if config.PreserveObjectKeysOrder {
+		sort.Sort(byIndex(keys))
+	} else {
+		sort.Sort(byValue(keys))
+	}
 
 	items := make([]string, len(keys))
 	for i, k := range keys {
