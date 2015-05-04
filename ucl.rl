@@ -85,8 +85,7 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	}
 	
 	action end_key {
-		// TODO(imax): unescape content.
-		key = Key{Value: string(data[start+1:fpc]), Index: index}
+		key = Key{Value: json_unescape(string(data[start+1:fpc])), Index: index}
 		index++
 	}
 
@@ -189,8 +188,7 @@ func parse_array(data []rune, p int, pe int) (Value, int, error) {
 	}
 	
 	action end_string {
-		// TODO(imax): unescape content.
-		ret = &String{Value: string(data[start+1:fpc])}
+		ret = &String{Value: json_unescape(string(data[start+1:fpc]))}
 	}
 
 	false = "false" @{ret = &Bool{Value: false}};

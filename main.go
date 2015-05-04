@@ -118,8 +118,7 @@ type String struct {
 }
 
 func (v String) String() string {
-	// TODO(imax): this does not necessarily emits valid JSON.
-	return fmt.Sprintf("%q", v.Value)
+	return fmt.Sprintf("\"%s\"", json_escape(v.Value))
 }
 
 func (v String) format(indent string, config *FormatConfig) string {
@@ -183,8 +182,7 @@ type Key struct {
 }
 
 func (v Key) String() string {
-	// TODO(imax): this does not necessarily emits valid JSON.
-	return fmt.Sprintf("%q", v.Value)
+	return fmt.Sprintf("\"%s\"", json_escape(v.Value))
 }
 
 func (v Key) format(indent string, config *FormatConfig) string {
