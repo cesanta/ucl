@@ -5,6 +5,16 @@ import (
 	"strconv"
 )
 
+type parserError struct {
+	machine string
+	offset int
+	state int
+}
+
+func (e parserError) Error() string {
+	return fmt.Sprintf("error parsing %s at char %d", e.machine, e.offset)
+}
+
 %%{
 	machine common;
 	alphtype rune;
@@ -55,7 +65,7 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	if cs >= number_first_final {
 		return ret, p, nil
 	}
-	return nil, -1, fmt.Errorf("[number] wat p=%d cs=%d", p, cs)
+	return nil, -1, parserError{machine: "number", offset: p, state: cs}
 }
 
 //go:generate sh -c "ragel -Z -S object -V -p ucl.rl | dot -Tpng > object.png"
@@ -105,7 +115,7 @@ func parse_object(data []rune, p int, pe int) (Value, int, error) {
 	if cs >= object_first_final {
 		return ret, p, nil
 	}
-	return nil, -1, fmt.Errorf("[object] wat p=%d cs=%d", p, cs)
+	return nil, -1, parserError{machine: "object", offset: p, state: cs}
 }
 
 //go:generate sh -c "ragel -Z -S array -V -p ucl.rl | dot -Tpng > array.png"
@@ -143,7 +153,7 @@ func parse_array(data []rune, p int, pe int) (Value, int, error) {
 	if cs >= array_first_final {
 		return ret, p, nil
 	}
-	return nil, -1, fmt.Errorf("[array] wat p=%d cs=%d", p, cs)
+	return nil, -1, parserError{machine: "array", offset: p, state: cs}
 }
 
 //go:generate sh -c "ragel -Z -S value -V -p ucl.rl | dot -Tpng > value.png"
@@ -207,7 +217,7 @@ func parse_value(data []rune, p int, pe int) (Value, int, error) {
 	if cs >= value_first_final {
 		return ret, p, nil
 	}
-	return nil, -1, fmt.Errorf("wat p=%d cs=%d", p, cs)
+	return nil, -1, parserError{machine: "value", offset: p, state: cs}
 }
 
 //go:generate sh -c "ragel -Z -S document -V -p ucl.rl | dot -Tpng > document.png"
