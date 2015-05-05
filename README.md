@@ -9,5 +9,3 @@ Known issues
 
 This library is still work in progress and does not support any UCL features
 yet, only plain JSON.
-
-Unescaping/escaping of characters inside string values is not implemented yet.
