@@ -25,8 +25,6 @@ func jsonEscape(s string) string {
 			r.WriteString(`\"`) // err is always nil
 		case '\\':
 			r.WriteString(`\\`) // err is always nil
-		case '/':
-			r.WriteString(`\/`) // err is always nil
 		case '\b':
 			r.WriteString(`\b`) // err is always nil
 		case '\f':

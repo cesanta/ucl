@@ -43,6 +43,9 @@ func TestCanonicalFormat(t *testing.T) {
     456
   ]
 }`,
+		`["a/b"]`: `[
+  "a/b"
+]`,
 	}
 	run(t, nil, cases)
 }
