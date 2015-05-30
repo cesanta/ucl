@@ -52,13 +52,14 @@ func TestParseJSON(t *testing.T) {
 
 func TestUnescape(t *testing.T) {
 	cases := map[string]string{
-		`a`:         `a`,
-		`\n`:        "\n",
-		`aa\na`:     "aa\na",
-		`aa\\n`:     `aa\n`,
-		`aa\\n\\a`:  `aa\n\a`,
-		`aa\\u1234`: `aa\u1234`,
-		`aa\u1234`:  "aa\u1234",
+		`a`:            `a`,
+		`\n`:           "\n",
+		`aa\na`:        "aa\na",
+		`aa\\n`:        `aa\n`,
+		`aa\\n\\a`:     `aa\n\a`,
+		`aa\\u1234`:    `aa\u1234`,
+		`aa\u1234`:     "aa\u1234",
+		`\uD834\uDD1E`: "\U0001D11E",
 	}
 	for in, expected := range cases {
 		if got, err := jsonUnescape(in); err != nil || got != expected {
@@ -83,11 +84,11 @@ func TestUnescape(t *testing.T) {
 
 func TestEscape(t *testing.T) {
 	cases := map[string]string{
-		"a":         `a`,
-		"\n":        `\n`,
-		"aa\na":     `aa\na`,
-		"aa\\n":      `aa\\n`,
-		"aa\\n\\a":  `aa\\n\\a`,
+		"a":        `a`,
+		"\n":       `\n`,
+		"aa\na":    `aa\na`,
+		"aa\\n":    `aa\\n`,
+		"aa\\n\\a": `aa\\n\\a`,
 	}
 	for in, expected := range cases {
 		if got := jsonEscape(in); got != expected {
