@@ -16,17 +16,17 @@ import (
 // data is layed out in the output file.
 type FormatConfig struct {
 	// Indent is a string to use for each indentation level. If not set defaults to 2 spaces.
-	Indent                   string `json:",omitempty"`
+	Indent string `json:",omitempty"`
 	// MultilineObjectThreshold is the maximum length for an object to be written out on a single line.
 	// Default is 0, meaning that any non-empty object will be written out with key-value pairs on separate lines.
-	MultilineObjectThreshold int    `json:",omitempty"`
+	MultilineObjectThreshold int `json:",omitempty"`
 	// MultilineObjectThreshold is the maximum length for an array to be written out on a single line.
 	// Default is 0, meaning that any non-empty array will be written out with items on separate lines.
-	MultilineArrayThreshold  int    `json:",omitempty"`
+	MultilineArrayThreshold int `json:",omitempty"`
 	// PreserveObjectKeysOrder must be set to true if you want to keep keys in the same order as in the input.
 	// By default keys are sorted in lexicographical order.
-	PreserveObjectKeysOrder  bool   `json:",omitempty"`
-	placeholder struct{}
+	PreserveObjectKeysOrder bool `json:",omitempty"`
+	placeholder             struct{}
 }
 
 // Value represents a UCL value.
@@ -212,6 +212,20 @@ func (v Object) String() string {
 		t = append(t, key.String()+":"+item.String())
 	}
 	return "{" + strings.Join(t, ",") + "}"
+}
+
+func (v Object) Find(key string) Value {
+	val, _ := v.Lookup(key)
+	return val
+}
+
+func (v Object) Lookup(key string) (Value, bool) {
+	for k, v := range v.Value {
+		if k.Value == key {
+			return v, true
+		}
+	}
+	return nil, false
 }
 
 func (v Object) format(indent string, config *FormatConfig) string {
