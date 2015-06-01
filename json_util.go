@@ -3,19 +3,8 @@ package ucl
 import (
 	"bytes"
 	"fmt"
+	"unicode/utf16"
 )
-
-/* TODO(imax): code below does not take into account escaping of
- * non-BMP characters as specified by RFC 4627.
- *
- *   To escape an extended character that is not in the Basic Multilingual
- *   Plane, the character is represented as a twelve-character sequence,
- *   encoding the UTF-16 surrogate pair.  So, for example, a string
- *   containing only the G clef character (U+1D11E) may be represented as
- *   "\uD834\uDD1E".
- *
- * Such surrogate pairs will be unescaped as 2 adjacent UTF-8 sequences.
- */
 
 func jsonEscape(s string) string {
 	r := bytes.NewBuffer(nil)
@@ -62,14 +51,17 @@ func jsonUnescape(s string) (string, error) {
 	r := bytes.NewBuffer(nil)
 	start := 0
 	const (
-		RecordStart    = iota // Beginning of the string or right after the escape sequence.
-		Regular               // After a regular unescaped character.
-		AfterBackslash        // After a backslash.
-		AfterU                // After \u, a separate counter is used to eat exactly 4 next characters.
+		RecordStart             = iota // Beginning of the string or right after the escape sequence.
+		Regular                        // After a regular unescaped character.
+		AfterBackslash                 // After a backslash.
+		AfterU                         // After \u, a separate counter is used to eat exactly 4 next characters.
+		AfterSurrogate                 // After \u-escaped first part of surrogate pair.
+		AfterSurrogateBackslash        // After \ while parsing second half of surrogate pair.
+		AfterSurrogateU                // After \u while parsing second half of surrogate pair.
 	)
 	state := RecordStart
 	var ucount uint
-	var u rune
+	var first, u rune
 	// Iteration over a string interpretes it as UTF-8 and produces Unicode
 	// runes. i is the index of the first byte of the rune, c is the rune.
 	for i, c := range s {
@@ -129,7 +121,38 @@ func jsonUnescape(s string) (string, error) {
 			u |= v << (4 * (3 - ucount))
 			ucount++
 			if ucount == 4 {
-				r.WriteRune(u) // err is always nil
+				if utf16.IsSurrogate(u) {
+					first = u
+					state = AfterSurrogate
+				} else {
+					r.WriteRune(u) // err is always nil
+					state = RecordStart
+				}
+			}
+		case AfterSurrogate:
+			if c != '\\' {
+				return "", fmt.Errorf("expecting another escaped character after a first component of surrogate pair at %d", i)
+			}
+			state = AfterSurrogateBackslash
+		case AfterSurrogateBackslash:
+			if c != 'u' {
+				return "", fmt.Errorf("expecting another escaped character after a first component of surrogate pair at %d", i)
+			}
+			u = 0
+			ucount = 0
+			state = AfterSurrogateU
+		case AfterSurrogateU:
+			if !isHexDigit(c) {
+				return "", fmt.Errorf("invalid hex digit %q at %d", c, i)
+			}
+			v := hexDigitValue(c)
+			u |= v << (4 * (3 - ucount))
+			ucount++
+			if ucount == 4 {
+				if !utf16.IsSurrogate(u) {
+					return "", fmt.Errorf("expecting another escaped surrogate character after a first component of surrogate pair at %d", i)
+				}
+				r.WriteRune(utf16.DecodeRune(first, u))
 				state = RecordStart
 			}
 		}

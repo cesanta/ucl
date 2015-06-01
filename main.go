@@ -112,6 +112,19 @@ func (v Number) format(indent string, config *FormatConfig) string {
 	return v.String()
 }
 
+// Integer represents an integer numerical value.
+type Integer struct {
+	Value int64
+}
+
+func (v Integer) String() string {
+	return fmt.Sprintf("%d", v.Value)
+}
+
+func (v Integer) format(indent string, config *FormatConfig) string {
+	return v.String()
+}
+
 // String represents a string value.
 type String struct {
 	Value string

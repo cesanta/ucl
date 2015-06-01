@@ -3,6 +3,7 @@ package ucl
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 type parserError struct {
@@ -24,7 +25,7 @@ func (e parserError) Error() string {
 	}
 
 	action done { fhold; fbreak; }
-	
+
 	ws = [ \t\r\n];
 
 	unescaped = (0x20..0x21 | 0x23..0x5B | 0x5D..0x10FFFF);
@@ -38,13 +39,21 @@ func (e parserError) Error() string {
 	include common;
 
 	action end_number {
-		v, err := strconv.ParseFloat(string(data[start:fpc]), 64)
-		if err != nil {
-			return nil, -1, err
+		if strings.IndexAny(string(data[start:fpc]), ".eE") >= 0 {
+			v, err := strconv.ParseFloat(string(data[start:fpc]), 64)
+			if err != nil {
+				return nil, -1, err
+			}
+			ret = &Number{Value: v}
+		} else {
+			v, err := strconv.ParseInt(string(data[start:fpc]), 10, 64)
+			if err != nil {
+				return nil, -1, err
+			}
+			ret = &Integer{Value: v}
 		}
-		ret.Value = v
 	}
-	
+
 	int = "0" | ([1-9] . [0-9]*);
 	main := "-"? . int . ("." . [0-9]+)? . ([eE] . [\+\-]? . [0-9]+)? (^[0-9eE\-\+.] @end_number @done);
 
@@ -55,7 +64,7 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	var (
 		cs int
 		eof = pe
-		ret Number
+		ret Value
 		start = p
 	)
 	_ = eof
@@ -72,7 +81,7 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 %%{
 	machine object;
 	include common;
-	
+
 	action parse_value {
 		v, newp, err := parse_value(data, fpc, pe);
 		if err != nil { return nil, -1, err };
@@ -83,7 +92,7 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	action start_tok {
 		start = fpc
 	}
-	
+
 	action end_key {
 		s, err := jsonUnescape(string(data[start+1:fpc]))
 		if err != nil {
@@ -97,9 +106,9 @@ func parse_number(data []rune, p int, pe int) (Value, int, error) {
 	member = (key . ws* . ":" . ws* . (^ws >parse_value));
 
 	object_content = (member . (ws* . "," . ws* . member)*);
-	
+
 	main := (ws* . "{" . ws* . object_content? . ws* . ("}" %*done));
-	
+
 	write data;
 }%%
 
@@ -127,7 +136,7 @@ func parse_object(data []rune, p int, pe int) (Value, int, error) {
 %%{
 	machine array;
 	include common;
-	
+
 	action parse_value {
 		v, newp, err := parse_value(data, fpc, pe);
 		if err != nil { return nil, -1, err };
@@ -138,9 +147,9 @@ func parse_object(data []rune, p int, pe int) (Value, int, error) {
 	value = ^(ws | "]") >parse_value;
 
 	array_content = (value . (ws* . "," . ws* . value)*);
-	
+
 	main := (ws* . "[" . ws* . array_content? . ws* . ("]" %*done));
-	
+
 	write data;
 }%%
 
@@ -179,18 +188,18 @@ func parse_array(data []rune, p int, pe int) (Value, int, error) {
 		ret = v;
 		fexec newp;
 	}
-	
+
 	action parse_number {
 		v, newp, err := parse_number(data, fpc, pe)
 		if err != nil { return nil, -1, err };
 		ret = v;
 		fexec newp;
 	}
-	
+
 	action start_tok {
 		start = fpc
 	}
-	
+
 	action end_string {
 		s, err := jsonUnescape(string(data[start+1:fpc]))
 		if err != nil {
@@ -202,13 +211,13 @@ func parse_array(data []rune, p int, pe int) (Value, int, error) {
 	false = "false" @{ret = &Bool{Value: false}};
 	true = "true" @{ret = &Bool{Value: true}};
 	nullval = "null" @{ret = &Null{}};
-	
+
 	array = ws* . ("[" >parse_array);
 	object = ws* . ("{" >parse_object);
 	number = [\-0-9] >parse_number;
-	
+
 	main := (false | true | nullval | object | array | number | (string >start_tok @end_string)) %*done $!error;
-	
+
 	write data;
 }%%
 
@@ -246,14 +255,14 @@ func parse_value(data []rune, p int, pe int) (Value, int, error) {
 		ret = v;
 		fexec newp;
 	}
-	
+
 	array = "[" >parse_array;
 	object = "{" >parse_object;
 
 	document = ws* . (object | array) . ws*;
-	
+
 	main := document $!error;
-	
+
 	write data;
 }%%
 
