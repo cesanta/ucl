@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gelraen/ucl"
+	"github.com/cesanta/ucl"
 	"github.com/golang/glog"
 )
 
